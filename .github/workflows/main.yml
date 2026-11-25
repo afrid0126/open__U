@@ -26,8 +26,10 @@ jobs:
       - name: Run Python Project
         id: test
         continue-on-error: true
+        shell: bash
         run: |
-          python main.py 2>&1 | tee error.log
+          set -o pipefail
+          python -u main.py 2>&1 | tee error.log
 
       - name: Upload Error Log
         if: steps.test.outcome == 'failure'
@@ -42,9 +44,9 @@ jobs:
           WEBHOOK_URL: ${{ secrets.AGENT_WEBHOOK_URL }}
           REPOSITORY: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
-          ERROR_LOG: error.log
+        shell: bash
         run: |
-          ERROR_MESSAGE=$(cat "$ERROR_LOG")
+          ERROR_MESSAGE=$(cat error.log)
 
           PAYLOAD=$(jq -n \
             --arg repository_url "https://github.com/$REPOSITORY" \
@@ -56,6 +58,6 @@ jobs:
               branch: $branch
             }')
 
-          curl -X POST "$WEBHOOK_URL" \
+          curl --fail-with-body -X POST "$WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
