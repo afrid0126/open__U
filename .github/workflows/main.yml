@@ -15,15 +15,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Project Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Show Project Files
+        run: |
+          pwd
+          ls -la
+          find . -maxdepth 3 -name "*.py" -not -path "./.git/*"
 
       - name: Run Python Project
         id: test
@@ -31,7 +35,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python -u main.py 2>&1 | tee error.log
+          python -u error_tests.py 2>&1 | tee error.log
 
       - name: Upload Error Log
         if: steps.test.outcome == 'failure'
@@ -40,22 +44,22 @@ jobs:
           name: python-error-log
           path: error.log
 
-      - name: Trigger Autonomous Repair Agent
+      - name: Send Error to Local AI Agent
         if: steps.test.outcome == 'failure'
         env:
           WEBHOOK_URL: ${{ secrets.AGENT_WEBHOOK_URL }}
-          REPOSITORY_URL: https://github.com/afrid0126/open__U.git
-          BRANCH: main
+          REPO_URL: https://github.com/${{ github.repository }}.git
+          BRANCH: ${{ github.ref_name }}
         shell: bash
         run: |
           ERROR_MESSAGE=$(cat error.log)
 
           PAYLOAD=$(jq -n \
-            --arg repository_url "$REPOSITORY_URL" \
+            --arg repo_url "$REPO_URL" \
             --arg error_message "$ERROR_MESSAGE" \
             --arg branch "$BRANCH" \
             '{
-              repository_url: $repository_url,
+              repo_url: $repo_url,
               error_message: $error_message,
               branch: $branch
             }')
