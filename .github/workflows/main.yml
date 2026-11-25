@@ -1,0 +1,61 @@
+
+name: Autonomous Bug Fixing
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-repair:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Python Project
+        id: test
+        continue-on-error: true
+        run: |
+          python main.py 2>&1 | tee error.log
+
+      - name: Upload Error Log
+        if: steps.test.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-error-log
+          path: error.log
+
+      - name: Trigger Autonomous Repair Agent
+        if: steps.test.outcome == 'failure'
+        env:
+          WEBHOOK_URL: ${{ secrets.AGENT_WEBHOOK_URL }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          ERROR_LOG: error.log
+        run: |
+          ERROR_MESSAGE=$(cat "$ERROR_LOG")
+
+          PAYLOAD=$(jq -n \
+            --arg repository_url "https://github.com/$REPOSITORY" \
+            --arg error_message "$ERROR_MESSAGE" \
+            --arg branch "$BRANCH" \
+            '{
+              repository_url: $repository_url,
+              error_message: $error_message,
+              branch: $branch
+            }')
+
+          curl -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
