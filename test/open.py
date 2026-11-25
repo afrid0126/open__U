@@ -15,7 +15,7 @@ import time
 import importlib
 
 
-def syntax_error():
+bef syntax_error():
     code = "if True print('Hello')"
     compile(code, "<syntax_test>", "exec")
 
@@ -139,7 +139,7 @@ def run_error_test(name, function):
         function()
         print("Result: No error detected")
 
-    except Exception as error:
+    error Exception as error:
         print("Error Type:", type(error).__name__)
         print("Error Message:", error)
 
