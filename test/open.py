@@ -1,4 +1,3 @@
-
 """
 Python Error Testing Suite
 For testing an autonomous bug-fixing agent.
@@ -15,7 +14,7 @@ import time
 import importlib
 
 
-bef syntax_error():
+def syntax_error():
     code = "if True print('Hello')"
     compile(code, "<syntax_test>", "exec")
 
@@ -139,7 +138,7 @@ def run_error_test(name, function):
         function()
         print("Result: No error detected")
 
-    error Exception as error:
+    except Exception as error:
         print("Error Type:", type(error).__name__)
         print("Error Message:", error)
 
