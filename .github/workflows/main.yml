@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -42,14 +44,14 @@ jobs:
         if: steps.test.outcome == 'failure'
         env:
           WEBHOOK_URL: ${{ secrets.AGENT_WEBHOOK_URL }}
-          REPOSITORY: ${{ github.repository }}
-          BRANCH: ${{ github.ref_name }}
+          REPOSITORY_URL: https://github.com/afrid0126/open__U.git
+          BRANCH: main
         shell: bash
         run: |
           ERROR_MESSAGE=$(cat error.log)
 
           PAYLOAD=$(jq -n \
-            --arg repository_url "https://github.com/$REPOSITORY" \
+            --arg repository_url "$REPOSITORY_URL" \
             --arg error_message "$ERROR_MESSAGE" \
             --arg branch "$BRANCH" \
             '{
@@ -58,6 +60,9 @@ jobs:
               branch: $branch
             }')
 
-          curl --fail-with-body -X POST "$WEBHOOK_URL" \
+          curl --fail-with-body \
+            --connect-timeout 10 \
+            --max-time 60 \
+            -X POST "$WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
